@@ -115,28 +115,28 @@ const HINTTAGS = `
 //button |
 //select |
 //*[
-    @onclick or 
-    @onmouseover or 
-    @onmousedown or 
-    @onmouseup or 
-    @oncommand or 
-    @role='link'or 
-    @role='button' or 
-    @role='checkbox' or 
-    @role='combobox' or 
-    @role='listbox' or 
-    @role='listitem' or 
-    @role='menuitem' or 
-    @role='menuitemcheckbox' or 
-    @role='menuitemradio' or 
-    @role='option' or 
-    @role='radio' or 
-    @role='scrollbar' or 
-    @role='slider' or 
-    @role='spinbutton' or 
-    @role='tab' or 
-    @role='textbox' or 
-    @role='treeitem' or 
+    @onclick or
+    @onmouseover or
+    @onmousedown or
+    @onmouseup or
+    @oncommand or
+    @role='link'or
+    @role='button' or
+    @role='checkbox' or
+    @role='combobox' or
+    @role='listbox' or
+    @role='listitem' or
+    @role='menuitem' or
+    @role='menuitemcheckbox' or
+    @role='menuitemradio' or
+    @role='option' or
+    @role='radio' or
+    @role='scrollbar' or
+    @role='slider' or
+    @role='spinbutton' or
+    @role='tab' or
+    @role='textbox' or
+    @role='treeitem' or
     @tabindex
 ]`
 
