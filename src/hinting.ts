@@ -4,37 +4,44 @@
 
     important
         Connect to input system
-        Add Simulated clicking to activate()
         Gluing into tridactyl
-        Clear all hints
     unimportant
         Frames
         Redraw on reflow
 */
 
-import { elementsByXPath, isVisible } from './dom'
+import { elementsByXPath, isVisible, mouseEvent } from './dom'
 import { log } from './math'
 import { permutationsWithReplacement, islice, izip, map } from './itertools'
 
-let HINTS: Hint[] = []
+/** Simple container for the state of a single frame's hints. */
+class HintState {
+    public focusedHint: Hint
+    readonly hintHost = document.createElement('div')
+    readonly hints: Hint[] = []
+    public filter = ''
 
-/** For each hintable element, add a hintmark */
-export function hintPage() {
-    for (let [el, name] of izip(hintables(), hintnames())) {
-        HINTS.push(new Hint(el, name))
+    destructor() {
+        // Undo any alterations of the hinted elements
+        for (const hint of this.hints) {
+            hint.hidden = true
+        }
+
+        // Remove all hints from the DOM.
+        this.hintHost.remove()
     }
 }
 
-/** Array of hintable elements in viewport
+let modeState: HintState = undefined
 
-    Elements are hintable if
-        1. they can be meaningfully selected, clicked, etc
-        2. they're visible
-            1. Within viewport
-            2. Not hidden by another element
-*/
-function hintables() {
-    return [...elementsByXPath(HINTTAGS)].filter(isVisible)
+/** For each hintable element, add a hint */
+export function hintPage(hintableElements: Element[], onSelect: HintSelectedCallback) {
+    modeState = new HintState()
+    for (let [el, name] of izip(hintableElements, hintnames())) {
+        modeState.hints.push(new Hint(el, name, onSelect))
+    }
+    modeState.focusedHint = modeState.hints[0]
+    document.body.appendChild(modeState.hintHost)
 }
 
 /** vimperator-style minimal hint names */
@@ -46,21 +53,25 @@ function* hintnames(hintchars = HINTCHARS) {
     }
 }
 
+type HintSelectedCallback = (Hint) => any
+
 /** Place a flag by each hintworthy element */
 class Hint {
-    static readonly hintmother = document.createElement('div')
-    private flag
+    private readonly flag = document.createElement('span')
 
-    constructor(readonly target: Element, public name: string) {
+    constructor(
+        private readonly target: Element,
+        public readonly name: string,
+        private readonly onSelect: HintSelectedCallback
+    ) {
         const rect = target.getClientRects()[0]
-        this.flag = document.createElement('span')
         this.flag.textContent = name
         this.flag.className = 'Hint'
         this.flag.style.cssText = `
             top: ${rect.top}px;
             left: ${rect.left}px;
         `
-        Hint.hintmother.appendChild(this.flag)
+        modeState.hintHost.appendChild(this.flag)
         target.classList.add('HintElem')
     }
 
@@ -69,14 +80,14 @@ class Hint {
     set hidden(hide: boolean) {
         this.flag.hidden = hide
         if (hide) {
-            this.active = false
+            this.focused = false
             this.target.classList.remove('HintElem')
         } else
             this.target.classList.add('HintElem')
     }
 
-    set active(activ: boolean) {
-        if (activ) {
+    set focused(focus: boolean) {
+        if (focus) {
             this.target.classList.add('HintActive')
             this.target.classList.remove('HintElem')
         } else {
@@ -85,8 +96,8 @@ class Hint {
         }
     }
 
-    click() {
-        throw "Not implemented!"
+    select() {
+        this.onSelect(this)
     }
 }
 
@@ -104,6 +115,68 @@ function* hintnames_uniform(n: number, hintchars = HINTCHARS) {
 
 /* const HINTCHARS = 'hjklasdfgyuiopqwertnmzxcvb' */
 const HINTCHARS = 'asdf'
+
+function filter(fstr) {
+    const active: Hint[] = []
+    let foundMatch
+    for (let h of modeState.hints) {
+        if (!h.name.startsWith(fstr)) h.hidden = true
+        else {
+            if (! foundMatch) {
+                h.focused = true
+                modeState.focusedHint = h
+                foundMatch = true
+            }
+            active.push(h)
+        }
+
+    }
+    if (active.length == 1)
+        active[0].select()
+}
+
+/** Remove all hints, reset STATE. */
+function reset() {
+    modeState.destructor()
+    modeState = undefined
+}
+
+function hasModifiers(ke: KeyboardEvent) {
+    return ke.ctrlKey || ke.altKey || ke.metaKey || ke.shiftKey
+}
+
+/** If key is in hintchars, add it to filtstr and filter
+
+    Else if Enter, select focusedHint and reset, or reset on Escape.
+    Drop any other key.
+*/
+function pushKey(ke) {
+    if (hasModifiers(ke)) {
+        return
+    } if (ke.key === 'Enter') {
+        modeState.focusedHint.select()
+        reset()
+    } else if (ke.key === 'Escape') {
+        reset()
+    } else if (ke.key.length > 1) {
+        return
+    } else {
+        modeState.filter += ke.key
+        filter(modeState.filter)
+    }
+}
+
+/** Array of hintable elements in viewport
+
+    Elements are hintable if
+        1. they can be meaningfully selected, clicked, etc
+        2. they're visible
+            1. Within viewport
+            2. Not hidden by another element
+*/
+function hintables() {
+    return [...elementsByXPath(HINTTAGS)].filter(isVisible) as any as Element[]
+}
 
 // XPath.
 const HINTTAGS = `
@@ -140,29 +213,9 @@ const HINTTAGS = `
     @tabindex
 ]`
 
-isVisible(document.documentElement)
-islice('a',1)
+// DEBUGGING
+/* hintPage(hintables(), hint=>mouseEvent(hint.target, 'click')) */
+/* addEventListener('keydown', pushKey) */
 
-hintPage()
-document.body.appendChild(Hint.hintmother)
-
-export function filter(fstr) {
-    const active: Hint[] = []
-    let foundMatch
-    for (let h of HINTS) {
-        if (!h.name.startsWith(fstr)) h.hidden = true
-        else {
-            if (! foundMatch) {
-                h.active = true
-                foundMatch = true
-            }
-            active.push(h)
-        }
-
-    }
-    if (active.length == 1)
-        active[0].click()
-}
-
-let filtstr = ''
-addEventListener('keydown', e=>{filtstr+=e.key, filter(filtstr)})
+import {addListener} from './messaging'
+addListener('hinting_content', msg=>pushKey(msg.keyEvent))

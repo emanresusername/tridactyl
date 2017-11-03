@@ -2,7 +2,8 @@ export type TabMessageType =
     "excmd_content" |
     "keydown_content" |
     "commandline_content" |
-    "commandline_frame"
+    "commandline_frame" |
+    "hinting_content"
 export type NonTabMessageType = 
     "keydown_background" |
     "commandline_background"
@@ -105,16 +106,25 @@ export async function messageAllTabs(type: TabMessageType, command: string, args
 }
 
 
-const listeners = new Map<string, Set<listener>>()
+class onMessage {
+    static readonly listeners = new Map<string, Set<listener>>()
 
-/** Register a listener to be called for each message with type */
-export function addListener(type: MessageType, callback: listener) {
-    if (!listeners.get(type)) {
-        listeners.set(type, new Set())
+    /** Register a listener to be called for each message with type */
+    static addListener(type: MessageType, callback: listener) {
+        if (!listeners.get(type)) {
+            listeners.set(type, new Set())
+        }
+        listeners.get(type).add(callback)
+        return () => { listeners.get(type).delete(callback) }
     }
-    listeners.get(type).add(callback)
-    return () => { listeners.get(type).delete(callback) }
-}
+
+    static [Symbol.iterator] = function* (type: MessageType) {
+        function* innergen() {
+
+        }
+        function callback(msg) {
+            this.next(msg)
+    }
 
 /** Recv a message from runtime.onMessage and send to all listeners */
 function onMessage(message, sender, sendResponse) {

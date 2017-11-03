@@ -293,7 +293,7 @@ export function suppress(preventDefault?: boolean, stopPropagation?: boolean) {
 }
 
 //#background
-export function mode(mode: ModeType) {
+export function mode(mode: ModeName) {
     state.mode = mode
 }
 

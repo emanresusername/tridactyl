@@ -4,6 +4,7 @@
     "noEmitOnError": true,
     "outDir": "build/tsc-out",
     "sourceMap": true,
+    "module": "CommonJS",
     "target": "ES2017",
     "lib": ["ES2017","dom"],
     "typeRoots": ["node_modules/@types", "node_modules/web-ext-types/"],

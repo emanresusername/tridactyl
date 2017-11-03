@@ -49,6 +49,42 @@ function isEditableHTMLInput (element: MsgSafeNode) {
   return false
 }
 
+/**
+ * Dispatch a mouse event to the target element
+ * based on cVim's implementation
+ * @param {HTMLElement} element
+ * @param {'hover' | 'unhover' | 'click'} type
+ * @param {{ ctrlKey, shiftKey, altKey, metaKey }} modifierKeys
+ */
+export function mouseEvent (element: Element, type: 'hover'|'unhover'|'click', modifierKeys = {}) {
+  let events
+  switch (type) {
+    case 'hover':
+      events = ['mouseover', 'mouseenter', 'mousemove']
+      break
+    case 'unhover':
+      events = ['mousemove', 'mouseout', 'mouseleave']
+      break
+    case 'click':
+      events = ['mouseover', 'mousedown', 'mouseup', 'click']
+      break
+  }
+  events.forEach(type => {
+    const event = new MouseEvent(type, {
+      bubbles: true,
+      cancelable: true,
+      view: window,
+      detail: 1, // usually the click count
+      ...modifierKeys
+    })
+    element.dispatchEvent(event)
+  })
+}
+
+/** Iterable of elements that match xpath.
+
+    Adapted from stackoverflow
+*/
 export function* elementsByXPath(xpath, parent?)
 {
   let query = document.evaluate(xpath,
